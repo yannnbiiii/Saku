@@ -1,0 +1,65 @@
+{
+  "entities": {
+    "Expense": {
+      "title": "Expense",
+      "description": "Personal financial expense entry",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "The UID of the user who owns the expense" },
+        "title": { "type": "string", "description": "Title or short description of the expense" },
+        "amount": { "type": "number", "description": "Expense monetary amount" },
+        "categoryId": { "type": "string", "description": "ID of category" },
+        "categoryName": { "type": "string", "description": "Cached display name of category" },
+        "date": { "type": "string", "description": "Date of expense in YYYY-MM-DD format" },
+        "notes": { "type": "string", "description": "Optional notes or details" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp of creation" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp of update" }
+      },
+      "required": ["userId", "title", "amount", "categoryId", "categoryName", "date", "createdAt", "updatedAt"]
+    },
+    "Category": {
+      "title": "Category",
+      "description": "Expense category definition",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Owner user ID" },
+        "name": { "type": "string", "description": "Category name" },
+        "iconName": { "type": "string", "description": "Material icon identifier" },
+        "colorHex": { "type": "string", "description": "Color hex string for category" },
+        "isDefault": { "type": "boolean", "description": "Whether standard default category" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp of creation" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp of update" }
+      },
+      "required": ["userId", "name", "iconName", "colorHex", "isDefault", "createdAt", "updatedAt"]
+    },
+    "Budget": {
+      "title": "Budget",
+      "description": "Monthly category budget limit",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Owner user ID" },
+        "categoryId": { "type": "string", "description": "ID of the target category" },
+        "categoryName": { "type": "string", "description": "Cached category name" },
+        "monthlyLimit": { "type": "number", "description": "Spending limit amount" },
+        "month": { "type": "string", "description": "Month in YYYY-MM format" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp of creation" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp of update" }
+      },
+      "required": ["userId", "categoryId", "categoryName", "monthlyLimit", "month", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}/expenses/{expenseId}": {
+      "schema": { "$ref": "#/entities/Expense" },
+      "description": "User personal expenses"
+    },
+    "/users/{userId}/categories/{categoryId}": {
+      "schema": { "$ref": "#/entities/Category" },
+      "description": "User expense categories"
+    },
+    "/users/{userId}/budgets/{budgetId}": {
+      "schema": { "$ref": "#/entities/Budget" },
+      "description": "User monthly category budgets"
+    }
+  }
+}

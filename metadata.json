@@ -1,0 +1,6 @@
+{
+  "name": "Saku",
+  "description": "Aplikasi pencatat pengeluaran keuangan pribadi minimalis dengan visualisasi grafik pengeluaran dan anggaran bulanan.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

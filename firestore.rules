@@ -1,0 +1,86 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidExpense(data) {
+      return data.userId is string && data.userId.size() > 0
+        && data.title is string && data.title.size() > 0 && data.title.size() <= 100
+        && data.amount is number && data.amount > 0
+        && data.categoryId is string && data.categoryId.size() > 0
+        && data.categoryName is string && data.categoryName.size() > 0 && data.categoryName.size() <= 50
+        && data.date is string && data.date.size() == 10
+        && (!('notes' in data) || (data.notes is string && data.notes.size() <= 500))
+        && data.createdAt is timestamp && data.createdAt <= request.time
+        && data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidCategory(data) {
+      return data.userId is string && data.userId.size() > 0
+        && data.name is string && data.name.size() > 0 && data.name.size() <= 50
+        && data.iconName is string && data.iconName.size() > 0 && data.iconName.size() <= 50
+        && data.colorHex is string && data.colorHex.size() >= 4 && data.colorHex.size() <= 9
+        && data.isDefault is bool
+        && data.createdAt is timestamp && data.createdAt <= request.time
+        && data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidBudget(data) {
+      return data.userId is string && data.userId.size() > 0
+        && data.categoryId is string && data.categoryId.size() > 0
+        && data.categoryName is string && data.categoryName.size() > 0 && data.categoryName.size() <= 50
+        && data.monthlyLimit is number && data.monthlyLimit > 0
+        && data.month is string && data.month.size() == 7
+        && data.createdAt is timestamp && data.createdAt <= request.time
+        && data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    match /users/{userId} {
+      allow read, write: if isOwner(userId);
+
+      match /expenses/{expenseId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId)
+          && request.resource.data.userId == userId
+          && isValidExpense(request.resource.data);
+        allow update: if isOwner(userId)
+          && request.resource.data.userId == userId
+          && isValidExpense(request.resource.data)
+          && request.resource.data.createdAt == resource.data.createdAt;
+        allow delete: if isOwner(userId);
+      }
+
+      match /categories/{categoryId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId)
+          && request.resource.data.userId == userId
+          && isValidCategory(request.resource.data);
+        allow update: if isOwner(userId)
+          && request.resource.data.userId == userId
+          && isValidCategory(request.resource.data)
+          && request.resource.data.createdAt == resource.data.createdAt;
+        allow delete: if isOwner(userId);
+      }
+
+      match /budgets/{budgetId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId)
+          && request.resource.data.userId == userId
+          && isValidBudget(request.resource.data);
+        allow update: if isOwner(userId)
+          && request.resource.data.userId == userId
+          && isValidBudget(request.resource.data)
+          && request.resource.data.createdAt == resource.data.createdAt;
+        allow delete: if isOwner(userId);
+      }
+    }
+  }
+}
