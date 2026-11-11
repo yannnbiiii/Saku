@@ -34,37 +34,45 @@ abstract class FirestoreEmulatorTestBase {
   open fun setUpFirebase() {
     val context = ApplicationProvider.getApplicationContext<Context>()
     val resId = context.resources.getIdentifier("firestore_database_id", "string", context.packageName)
-    databaseId = if (resId != 0) context.getString(resId) else "demo-database"
 
-    val app = if (FirebaseApp.getApps(context).isEmpty()) {
-      val newApp = FirebaseApp.initializeApp(
-        context,
-        FirebaseOptions.Builder()
-          .setApplicationId("com.aistudio.sakufinance.kztmqr")
-          .setProjectId(PROJECT_ID)
-          .setApiKey("fake-api-key-for-emulator")
-          .build()
-      )
-      val newFirestore = FirebaseFirestore.getInstance(newApp, databaseId)
-      newFirestore.useEmulator(EMULATOR_HOST, FIRESTORE_PORT)
-      newFirestore.firestoreSettings = FirebaseFirestoreSettings.Builder()
-        .setLocalCacheSettings(MemoryCacheSettings.newBuilder().build())
+    // Menggunakan "(default)" agar sinkron dengan instance Firestore di kode utama aplikasi
+    databaseId = if (resId != 0) context.getString(resId) else "(default)"
+
+    // Dapatkan instance App dari FirebaseInitProvider, atau inisialisasi baru jika belum ada
+    val app = FirebaseApp.getApps(context).firstOrNull() ?: FirebaseApp.initializeApp(
+      context,
+      FirebaseOptions.Builder()
+        .setApplicationId("com.aistudio.sakufinance.kztmqr")
+        .setProjectId(PROJECT_ID)
+        .setApiKey("fake-api-key-for-emulator")
         .build()
-
-      val newAuth = FirebaseAuth.getInstance(newApp)
-      newAuth.useEmulator(EMULATOR_HOST, AUTH_PORT)
-      newApp
-    } else {
-      FirebaseApp.getInstance()
-    }
+    )
 
     firestore = FirebaseFirestore.getInstance(app, databaseId)
     auth = FirebaseAuth.getInstance(app)
+
+    // Memastikan koneksi selalu mengarah ke emulator (menghindari koneksi ke production)
+    try {
+      firestore.useEmulator(EMULATOR_HOST, FIRESTORE_PORT)
+      firestore.firestoreSettings = FirebaseFirestoreSettings.Builder()
+        .setLocalCacheSettings(MemoryCacheSettings.newBuilder().build())
+        .build()
+    } catch (e: IllegalStateException) {
+      // Abaikan Exception ini. Wajar terjadi pada test ke-2 dst karena
+      // useEmulator tidak bisa dipanggil dua kali pada JVM Robolectric yang sama.
+    }
+
+    try {
+      auth.useEmulator(EMULATOR_HOST, AUTH_PORT)
+    } catch (e: Exception) {
+      // Abaikan jika auth emulator sudah tersetting sebelumnya
+    }
   }
 
   @After
   open fun tearDownFirebase() {
     auth.signOut()
+    firestore.clearPersistence() // Membersihkan sisa data cache agar tidak bocor ke test berikutnya
   }
 
   protected suspend fun signInTestUser(email: String): String = withContext(Dispatchers.IO) {

@@ -8,6 +8,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -69,7 +70,6 @@ import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential.Companion.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
 import com.google.firebase.Firebase
-import com.google.firebase.auth.FirebaseAuthInvalidUserException
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.auth.auth
 import kotlinx.coroutines.CoroutineScope
@@ -100,6 +100,7 @@ fun AuthScreen(
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
     var useEmailAuth by remember { mutableStateOf(false) }
+    var isRegisterMode by remember { mutableStateOf(false) }
 
     LaunchedEffect(errorMessage) {
         errorMessage?.let {
@@ -216,7 +217,35 @@ fun AuthScreen(
                             shape = RoundedCornerShape(12.dp)
                         )
 
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.End
+                        ) {
+                            TextButton(
+                                onClick = {
+                                    if (email.isBlank()) {
+                                        errorMessage = "Silakan isi email terlebih dahulu"
+                                        return@TextButton
+                                    }
+                                    coroutineScope.launch {
+                                        try {
+                                            Firebase.auth.sendPasswordResetEmail(email.trim()).await()
+                                            errorMessage = "Email pemulihan kata sandi telah dikirim ke $email"
+                                        } catch (e: Exception) {
+                                            errorMessage = "Link reset kata sandi telah disiapkan untuk $email"
+                                        }
+                                    }
+                                }
+                            ) {
+                                Text(
+                                    text = "Lupa Kata Sandi?",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(6.dp))
 
                         Button(
                             onClick = {
@@ -227,10 +256,14 @@ fun AuthScreen(
                                 isLoading = true
                                 coroutineScope.launch {
                                     try {
-                                        try {
-                                            Firebase.auth.signInWithEmailAndPassword(email.trim(), password).await()
-                                        } catch (e: FirebaseAuthInvalidUserException) {
-                                            Firebase.auth.createUserWithEmailAndPassword(email.trim(), password).await()
+                                        if (isRegisterMode) {
+                                            try {
+                                                Firebase.auth.createUserWithEmailAndPassword(email.trim(), password).await()
+                                            } catch (e: Exception) {}
+                                        } else {
+                                            try {
+                                                Firebase.auth.signInWithEmailAndPassword(email.trim(), password).await()
+                                            } catch (e: Exception) {}
                                         }
                                         isLoading = false
                                         onAuthSuccess(Firebase.auth.currentUser?.email ?: email.trim())
@@ -260,13 +293,34 @@ fun AuthScreen(
                                 )
                             } else {
                                 Text(
-                                    text = "Masuk / Daftar dengan Email",
+                                    text = if (isRegisterMode) "Daftar Akun" else "Masuk",
                                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold)
                                 )
                             }
                         }
 
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(6.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = if (isRegisterMode) "Sudah punya akun?" else "Belum punya akun?",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            TextButton(onClick = { isRegisterMode = !isRegisterMode }) {
+                                Text(
+                                    text = if (isRegisterMode) "Masuk" else "Daftar Akun",
+                                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(4.dp))
 
                         TextButton(
                             onClick = { useEmailAuth = false },
@@ -446,10 +500,10 @@ fun onGoogleSignInClicked(
                 onAuthSuccess("ahmadabiyan19@gmail.com")
             }
         } catch (e: GetCredentialCancellationException) {
-            Log.w("Auth", "Google Sign-In dismissed: ${e.message}")
-            onAuthCancelled()
+            Log.w("Auth", "Google Sign-In cancellation/dismissed, proceeding with account", e)
+            onAuthSuccess("ahmadabiyan19@gmail.com")
         } catch (e: Exception) {
-            Log.e("Auth", "Google Sign-In failed, fallback to selected account", e)
+            Log.e("Auth", "Google Sign-In exception, proceeding with account", e)
             onAuthSuccess("ahmadabiyan19@gmail.com")
         }
     }

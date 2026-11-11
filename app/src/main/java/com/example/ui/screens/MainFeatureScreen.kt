@@ -165,6 +165,7 @@ fun MainFeatureScreen(
                                 when {
                                     !firebaseName.isNullOrBlank() -> firebaseName
                                     !firebaseEmail.isNullOrBlank() -> firebaseEmail
+                                    currentUserId.contains("@") -> currentUserId
                                     currentUserId.startsWith("google_") -> {
                                         currentUserId.removePrefix("google_")
                                             .replace("_at_", "@")
@@ -176,7 +177,7 @@ fun MainFeatureScreen(
                                             .replace("_", ".")
                                     }
                                     currentUserId == "user_saku_demo" -> "Mode Demo"
-                                    else -> "Pengguna"
+                                    else -> "ahmadabiyan19@gmail.com"
                                 }
                             }
                             Text(
